@@ -83,6 +83,7 @@
         </div>
         <div class="itemActions">
           <button class="toggle" data-action="toggle" data-id="${s.id}">${s.paid ? "إلغاء التسديد" : "تسجيل التسديد"}</button>
+          <button class="whatsapp" data-action="whatsapp" data-id="${s.id}">💬 إرسال تنبيه</button>
           <button class="edit" data-action="edit" data-id="${s.id}">تعديل</button>
           <button class="delete" data-action="delete" data-id="${s.id}">حذف</button>
         </div>
@@ -165,6 +166,30 @@
       $("saveBtn").textContent = "حفظ التعديل";
       $("cancelBtn").style.display = "inline-block";
       window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    if (action === "whatsapp") {
+      const s = subscribers[index];
+      const phone = String(s.phone || "").replace(/[^0-9]/g, "");
+      if (!phone) {
+        showMessage("لا يوجد رقم هاتف لهذا المشترك.", "err");
+        return;
+      }
+
+      let waPhone = phone;
+      if (waPhone.startsWith("0")) waPhone = "964" + waPhone.slice(1);
+      if (!waPhone.startsWith("964")) waPhone = "964" + waPhone;
+
+      const date = s.dueDate || "موعد الانتهاء المسجل";
+      const message =
+        "السلام عليكم 🌹\\n" +
+        "عزيزي المشترك، نود إعلامك بأن اشتراكك في خدمة الإنترنت سينتهي بتاريخ " + date + ".\\n" +
+        "يرجى تسديد الاشتراك قبل موعد الانتهاء لضمان استمرار الخدمة دون انقطاع.\\n" +
+        "شكراً لتعاونكم 🌹\\n" +
+        "إدارة البرج";
+
+      window.open("https://wa.me/" + waPhone + "?text=" + encodeURIComponent(message), "_blank");
+      return;
     }
 
     if (action === "delete") {
