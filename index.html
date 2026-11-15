@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0f766e">
+  <title>إدارة البرج</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>📡 إدارة البرج</h1>
+      <p>إدارة المشتركين والتسديدات</p>
+    </div>
+    <span class="version">نسخة نظيفة 1.0</span>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <h2>إضافة مشترك</h2>
+      <form id="subscriberForm" autocomplete="off">
+        <input type="hidden" id="editId">
+
+        <div class="grid">
+          <label>
+            اسم المشترك
+            <input id="name" required placeholder="مثال: أحمد محمد">
+          </label>
+
+          <label>
+            رقم الهاتف
+            <input id="phone" inputmode="tel" placeholder="07xxxxxxxxx">
+          </label>
+
+          <label>
+            الحساب / اسم المستخدم
+            <input id="account" placeholder="مثال: ahmed01">
+          </label>
+
+          <label>
+            الباقة
+            <input id="plan" placeholder="مثال: 10 ميغا">
+          </label>
+
+          <label>
+            المبلغ
+            <input id="amount" type="number" min="0" step="0.01" placeholder="25000">
+          </label>
+
+          <label>
+            تاريخ الاستحقاق
+            <input id="dueDate" type="date">
+          </label>
+        </div>
+
+        <div class="actions">
+          <button class="primary" type="submit" id="saveBtn">حفظ المشترك</button>
+          <button class="secondary" type="button" id="cancelBtn">إلغاء</button>
+        </div>
+
+        <div id="message" class="message" aria-live="polite"></div>
+      </form>
+    </section>
+
+    <section class="stats">
+      <div class="stat"><span>إجمالي المشتركين</span><strong id="totalCount">0</strong></div>
+      <div class="stat"><span>المسدّدون</span><strong id="paidCount">0</strong></div>
+      <div class="stat"><span>غير المسدّدين</span><strong id="unpaidCount">0</strong></div>
+    </section>
+
+    <section class="card">
+      <div class="listHead">
+        <div>
+          <h2>المشتركون</h2>
+          <p class="hint">البيانات تُحفظ على هذا الجهاز.</p>
+        </div>
+        <input id="search" class="search" placeholder="🔎 بحث بالاسم أو الهاتف أو الحساب">
+      </div>
+
+      <div id="empty" class="empty">لا توجد بيانات حتى الآن.</div>
+      <div id="list" class="list"></div>
+    </section>
+  </main>
+
+  <footer>إدارة البرج — نسخة تجريبية محلية</footer>
+
+  <script src="app.js?v=1.0.0"></script>
+</body>
+</html>
