@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f766e">
+<title>إدارة البرج</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f2f7f7;color:#26383a;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
+button,input,select,textarea{font:inherit}
+header{background:#117b72;color:#fff;padding:28px 20px 22px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+header h1{margin:0;font-size:32px}
+header p{margin:4px 0 0;font-size:17px}
+.head-actions{display:flex;flex-direction:column;gap:10px}
+.head-actions button{background:#2b9188;color:#fff;border:1px solid #65b8b1;border-radius:15px;padding:10px 18px}
+.container{max-width:900px;margin:auto;padding:18px}
+.card{background:#fff;border:1px solid #d8e5e5;border-radius:20px;padding:18px;margin-bottom:16px;box-shadow:0 2px 8px #0000000b}
+h2,h3{margin-top:0}
+label{display:block;font-weight:700;margin:10px 0 6px}
+input,select,textarea{width:100%;border:1px solid #ccd9d9;border-radius:12px;padding:12px;background:#fff}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:14px}
+button{border:0;border-radius:12px;padding:12px 16px;cursor:pointer}
+.primary{background:#0f766e;color:#fff}
+.secondary{background:#e8f1ff;color:#174f9c}
+.whatsapp{background:#dff6e9;color:#087443}
+.receipt{background:#fff5d8;color:#805d00}
+.danger{background:#ffe8e8;color:#a51e1e}
+.neutral{background:#edf2f2;color:#405456}
+.subscriber{border:1px solid #d9e6e6;border-radius:18px;padding:16px;margin:12px 0;position:relative}
+.subscriber h3{margin:0 0 8px;font-size:23px}
+.line{margin:7px 0;color:#536668;font-size:16px}
+.badge{display:inline-block;padding:7px 12px;border-radius:20px;font-weight:700;font-size:14px}
+.paid{background:#dff6e9;color:#087443}
+.unpaid{background:#fff1d6;color:#805d00}
+.days{font-weight:700}
+.search{margin-bottom:12px}
+.empty{text-align:center;padding:30px;color:#6c7c7e}
+.toast{position:fixed;left:18px;right:18px;bottom:20px;background:#183436;color:#fff;border-radius:14px;padding:14px;text-align:center;display:none;z-index:50}
+.receipt-box{background:#fff;border:2px dashed #0f766e;border-radius:18px;padding:18px;margin-bottom:16px}
+.receipt-box h2{text-align:center;color:#0f766e}
+.small{font-size:13px;color:#697879}
+@media(max-width:600px){header{align-items:flex-start}header h1{font-size:27px}.row{grid-template-columns:1fr}.container{padding:12px}.actions button{flex:1;min-width:125px}}
+</style>
+</head>
+<body>
+
+<header>
+<div>
+<h1>📡 إدارة البرج</h1>
+<p>نظام إدارة المشتركين والتسديدات</p>
+</div>
+<div class="head-actions">
+<button onclick="backupData()">💾 نسخ احتياطي</button>
+<button onclick="document.getElementById('restoreInput').click()">📥 استرجاع</button>
+<input id="restoreInput" type="file" accept=".json,application/json" hidden onchange="restoreData(event)">
+</div>
+</header>
+
+<main class="container">
+
+<section class="card">
+<h2>➕ إضافة مشترك</h2>
+<div class="row">
+<div>
+<label>اسم المشترك</label>
+<input id="name" placeholder="مثال: عمر سلام">
+</div>
+<div>
+<label>رقم الهاتف</label>
+<input id="phone" inputmode="tel" placeholder="077xxxxxxxx">
+</div>
+</div>
+<div class="row">
+<div>
+<label>الحساب</label>
+<input id="account" placeholder="مثال: omarss@bs">
+</div>
+<div>
+<label>الباقة</label>
+<input id="package" placeholder="مثال: 30 ميغا">
+</div>
+</div>
+<div class="row">
+<div>
+<label>مبلغ الاشتراك</label>
+<input id="amount" type="number" inputmode="decimal" placeholder="35000">
+</div>
+<div>
+<label>تاريخ انتهاء الاشتراك</label>
+<input id="expiry" type="date">
+</div>
+</div>
+<div class="actions">
+<button class="primary" onclick="addSubscriber()">➕ إضافة المشترك</button>
+</div>
+</section>
+
+<section class="card">
+<h2>🔎 المشتركين</h2>
+<input class="search" id="search" placeholder="ابحث بالاسم أو الهاتف أو الحساب..." oninput="render()">
+<div id="list"></div>
+</section>
+
+<section class="card">
+<h3>📨 رسالة واتساب</h3>
+<textarea id="messageTemplate" rows="4">السلام عليكم {name}، نود إعلامك بأن اشتراكك ينتهي بتاريخ {expiry}. يرجى تسديد الاشتراك لتجنب انقطاع الخدمة. شكراً لك.</textarea>
+<p class="small">المتغيرات: {name}، {amount}، {expiry}، {package}</p>
+</section>
+
+</main>
+<div id="toast" class="toast"></div>
+
+<script>
+const KEY="basem11_tower_data_v1";
+let subscribers=JSON.parse(localStorage.getItem(KEY)||"[]");
+
+function save(){localStorage.setItem(KEY,JSON.stringify(subscribers));render()}
+function toast(msg){const e=document.getElementById("toast");e.textContent=msg;e.style.display="block";clearTimeout(window._toast);window._toast=setTimeout(()=>e.style.display="none",2200)}
+function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m]))}
+function daysLeft(date){
+ if(!date)return null;
+ const a=new Date(); a.setHours(0,0,0,0);
+ const b=new Date(date+"T00:00:00"); b.setHours(0,0,0,0);
+ return Math.ceil((b-a)/86400000);
+}
+function addSubscriber(){
+ const name=document.getElementById("name").value.trim();
+ const phone=document.getElementById("phone").value.trim();
+ if(!name||!phone){toast("اكتب اسم المشترك ورقم الهاتف");return}
+ subscribers.push({
+  id:Date.now(),name,phone,
+  account:document.getElementById("account").value.trim(),
+  package:document.getElementById("package").value.trim(),
+  amount:document.getElementById("amount").value.trim(),
+  expiry:document.getElementById("expiry").value,
+  paid:false,paidAt:"",receiptNo:""
+ });
+ ["name","phone","account","package","amount","expiry"].forEach(id=>document.getElementById(id).value="");
+ save();toast("تمت إضافة المشترك");
+}
+function editSubscriber(id){
+ const s=subscribers.find(x=>x.id===id); if(!s)return;
+ const name=prompt("اسم المشترك:",s.name); if(name===null)return;
+ const phone=prompt("رقم الهاتف:",s.phone); if(phone===null)return;
+ const account=prompt("الحساب:",s.account||""); if(account===null)return;
+ const pkg=prompt("الباقة:",s.package||""); if(pkg===null)return;
+ const amount=prompt("مبلغ الاشتراك:",s.amount||""); if(amount===null)return;
+ const expiry=prompt("تاريخ الانتهاء (YYYY-MM-DD):",s.expiry||""); if(expiry===null)return;
+ Object.assign(s,{name:name.trim(),phone:phone.trim(),account:account.trim(),package:pkg.trim(),amount:amount.trim(),expiry:expiry.trim()});
+ save();toast("تم تعديل المشترك");
+}
+function deleteSubscriber(id){
+ if(confirm("هل تريد حذف هذا المشترك؟")){
+  subscribers=subscribers.filter(x=>x.id!==id);save();toast("تم حذف المشترك");
+ }
+}
+function markPaid(id){
+ const s=subscribers.find(x=>x.id===id);if(!s)return;
+ s.paid=true;s.paidAt=new Date().toLocaleString("ar-IQ");s.receiptNo="BRG-"+String(s.id).slice(-6);
+ save();showReceipt(id);toast("تم تسجيل التسديد");
+}
+function cancelPaid(id){
+ const s=subscribers.find(x=>x.id===id);if(!s)return;
+ if(confirm("إلغاء حالة التسديد لهذا المشترك؟")){s.paid=false;s.paidAt="";s.receiptNo="";save();toast("تم إلغاء التسديد")}
+}
+function receiptText(s){
+ return `🧾 إيصال تسديد اشتراك\n\nرقم الإيصال: ${s.receiptNo||""}\nاسم المشترك: ${s.name}\nرقم الهاتف: ${s.phone}\nالحساب: ${s.account||"غير محدد"}\nالباقة: ${s.package||"غير محددة"}\nالمبلغ: ${s.amount||""} د.ع\nالحالة: تم التسديد ✅\nتاريخ التسديد: ${s.paidAt||""}\nانتهاء الاشتراك: ${s.expiry||"غير محدد"}\n\nشكراً لتسديدكم.`;
+}
+function sendWhatsApp(id,type="receipt"){
+ const s=subscribers.find(x=>x.id===id);if(!s)return;
+ let text="";
+ if(type==="warning"){
+  const t=document.getElementById("messageTemplate").value;
+  text=t.replaceAll("{name}",s.name).replaceAll("{amount}",s.amount||"").replaceAll("{expiry}",s.expiry||"").replaceAll("{package}",s.package||"");
+ }else{
+  if(!s.paid){toast("سجّل التسديد أولاً");return}
+  text=receiptText(s);
+ }
+ let p=s.phone.replace(/[^0-9]/g,"");
+ if(p.startsWith("0"))p="964"+p.slice(1);
+ if(!p.startsWith("964"))p="964"+p;
+ window.open("https://wa.me/"+p+"?text="+encodeURIComponent(text),"_blank");
+}
+function showReceipt(id){
+ const s=subscribers.find(x=>x.id===id);if(!s)return;
+ document.getElementById("receiptBox")?.remove();
+ const box=document.createElement("section");box.id="receiptBox";box.className="receipt-box";
+ box.innerHTML=`<h2>🧾 إيصال التسديد</h2>
+ <div class="line"><b>رقم الإيصال:</b> ${esc(s.receiptNo||"")}</div>
+ <div class="line">👤 <b>${esc(s.name)}</b></div>
+ <div class="line">📱 ${esc(s.phone)}</div>
+ <div class="line">👤 الحساب: ${esc(s.account||"غير محدد")}</div>
+ <div class="line">📶 الباقة: ${esc(s.package||"غير محددة")}</div>
+ <div class="line">💰 المبلغ: ${esc(s.amount||"")} د.ع</div>
+ <div class="line">✅ الحالة: تم التسديد</div>
+ <div class="line">🕒 تاريخ التسديد: ${esc(s.paidAt||"")}</div>
+ <div class="line">📅 انتهاء الاشتراك: ${esc(s.expiry||"غير محدد")}</div>
+ <div class="actions">
+ <button class="whatsapp" onclick="sendWhatsApp(${s.id})">📲 إرسال الإيصال واتساب</button>
+ <button class="neutral" onclick="document.getElementById('receiptBox').remove()">إغلاق</button>
+ </div>`;
+ document.querySelector("main").prepend(box);
+ window.scrollTo({top:0,behavior:"smooth"});
+}
+function render(){
+ const list=document.getElementById("list");
+ const q=(document.getElementById("search").value||"").toLowerCase().trim();
+ const arr=subscribers.filter(s=>(s.name+" "+s.phone+" "+(s.account||"")).toLowerCase().includes(q));
+ if(!arr.length){list.innerHTML='<div class="empty">لا يوجد مشتركون مطابقون.</div>';return}
+ list.innerHTML=arr.map(s=>{
+  const d=daysLeft(s.expiry);
+  const warning=d!==null&&!s.paid&&d<=7;
+  return `<div class="subscriber">
+   <div style="display:flex;justify-content:space-between;gap:10px;align-items:center">
+    <h3>${esc(s.name)}</h3>
+    <span class="badge ${s.paid?"paid":"unpaid"}">${s.paid?"✓ مسدّد":"غير مسدّد"}</span>
+   </div>
+   <div class="line">📱 ${esc(s.phone)}</div>
+   <div class="line">👤 الحساب: ${esc(s.account||"غير محدد")}</div>
+   <div class="line">📶 الباقة: ${esc(s.package||"غير محددة")}</div>
+   <div class="line">💰 ${esc(s.amount||"")} د.ع</div>
+   <div class="line">📅 ${esc(s.expiry||"غير محدد")}</div>
+   <div class="line days">${d===null?"":(d<0?"🔴 منتهي منذ "+Math.abs(d)+" يوم":d===0?"🔴 ينتهي اليوم":"⏱️ متبقي "+d+" يوم")}</div>
+   ${warning?'<div class="line" style="color:#a15c00;font-weight:700">⚠️ الاشتراك قريب من الانتهاء</div>':""}
+   <div class="actions">
+    ${s.paid
+      ?`<button class="receipt" onclick="showReceipt(${s.id})">🧾 إيصال</button>
+        <button class="secondary" onclick="cancelPaid(${s.id})">إلغاء التسديد</button>`
+      :`<button class="primary" onclick="markPaid(${s.id})">✅ تم تسديد المبلغ</button>`}
+    ${!s.paid&&warning?`<button class="whatsapp" onclick="sendWhatsApp(${s.id},'warning')">💬 تنبيه واتساب</button>`:""}
+    ${s.paid?`<button class="whatsapp" onclick="sendWhatsApp(${s.id})">📲 إرسال الإيصال واتساب</button>`:""}
+    <button class="secondary" onclick="editSubscriber(${s.id})">✏️ تعديل</button>
+    <button class="danger" onclick="deleteSubscriber(${s.id})">🗑️ حذف</button>
+   </div>
+  </div>`;
+ }).join("");
+}
+function backupData(){
+ const blob=new Blob([JSON.stringify(subscribers,null,2)],{type:"application/json"});
+ const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="basem11-backup.json";a.click();URL.revokeObjectURL(a.href);
+}
+function restoreData(event){
+ const file=event.target.files[0];if(!file)return;
+ const r=new FileReader();
+ r.onload=()=>{
+  try{
+   const data=JSON.parse(r.result);
+   if(!Array.isArray(data))throw new Error();
+   subscribers=data;save();toast("تم استرجاع النسخة الاحتياطية");
+  }catch(e){toast("ملف النسخة الاحتياطية غير صالح")}
+ };
+ r.readAsText(file);
+}
+render();
+</script>
+</body>
+</html>
