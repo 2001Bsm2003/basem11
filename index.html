@@ -115,7 +115,16 @@ function daysLeft(expiry){
   return Math.ceil((b-a)/86400000);
 }
 function receiptText(s){
-  return `إيصال تسديد - إدارة البرج%0Aالمشترك: ${s.name}%0Aالمبلغ: ${money(s.amount)}%0Aالحالة: تم تسديد المبلغ ✅%0Aتاريخ التسديد: ${s.paidAt||""}%0Aتاريخ انتهاء الاشتراك: ${s.expiry||""}%0Aرقم الإيصال: ${s.receiptNo||""}`;
+  return `🧾 إيصال تسديد – إدارة البرج
+
+👤 المشترك: ${s.name}
+💰 المبلغ: ${money(s.amount)}
+✅ الحالة: تم تسديد المبلغ بنجاح
+📅 تاريخ التسديد: ${s.paidAt || "غير محدد"}
+📅 تاريخ انتهاء الاشتراك: ${s.expiry || "غير محدد"}
+🔢 رقم الإيصال: ${s.receiptNo || "غير محدد"}
+
+شكراً لتسديدكم، نتمنى لكم دوام الخدمة 🌹`;
 }
 function reminderText(s){
   const d=daysLeft(s.expiry);
