@@ -128,7 +128,9 @@ function receiptText(s){
 }
 function reminderText(s){
   const d=daysLeft(s.expiry);
-  return `السلام عليكم ${s.name}%0Aنود تنبيهكم بأن اشتراك الإنترنت سينتهي بتاريخ ${s.expiry}، والمتبقي ${d} يوم.%0Aإدارة البرج 📡`;
+  return `السلام عليكم ${s.name}
+نود تنبيهكم بأن اشتراك الإنترنت سينتهي بتاريخ ${s.expiry}، والمتبقي ${d} يوم.
+إدارة البرج 📡`;
 }
 function saveSubscriber(){
   const name=document.getElementById("name").value.trim();
