@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f766e">
+<title>إدارة البرج</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;background:#f3f7f7;color:#123;min-height:100vh}
+header{background:#0f766e;color:#fff;padding:20px 16px;text-align:center}
+header h1{margin:0 0 6px;font-size:24px}
+header p{margin:0;opacity:.9}
+.container{max-width:720px;margin:auto;padding:16px}
+.card{background:#fff;border-radius:16px;padding:16px;margin:12px 0;box-shadow:0 4px 16px #00000012}
+label{display:block;font-weight:700;margin:10px 0 6px}
+input,button,textarea{font:inherit}
+input,textarea{width:100%;padding:12px;border:1px solid #ccd8d8;border-radius:10px;background:#fff}
+button{border:0;border-radius:10px;padding:12px 15px;cursor:pointer}
+.primary{background:#0f766e;color:#fff}
+.secondary{background:#e6f3f1;color:#0f766e}
+.danger{background:#fee2e2;color:#991b1b}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.actions button{flex:1;min-width:140px}
+.subscriber{border:1px solid #e1e8e8;border-radius:12px;padding:12px;margin:10px 0}
+.status{font-size:13px;color:#667;margin-top:5px}
+.empty{text-align:center;color:#777;padding:20px}
+#toast{position:fixed;bottom:20px;left:20px;right:20px;background:#123;color:#fff;padding:12px;border-radius:10px;display:none;text-align:center}
+.small{font-size:12px;color:#667}
+</style>
+</head>
+<body>
+<header>
+<h1>📡 إدارة البرج</h1>
+<p>إدارة المشتركين والتسديدات والرسائل</p>
+</header>
+
+<div class="container">
+<div class="card">
+<h2>إضافة مشترك</h2>
+<label>اسم المشترك</label>
+<input id="name" placeholder="مثال: أحمد محمد">
+<label>رقم الهاتف</label>
+<input id="phone" inputmode="tel" placeholder="مثال: 07701234567">
+<div class="row">
+<div>
+<label>مبلغ الاشتراك</label>
+<input id="amount" type="number" placeholder="مثال: 25000">
+</div>
+<div>
+<label>تاريخ الانتهاء</label>
+<input id="expiry" type="date">
+</div>
+</div>
+<div class="actions">
+<button class="primary" onclick="addSubscriber()">➕ إضافة المشترك</button>
+</div>
+</div>
+
+<div class="card">
+<h2>المشتركون</h2>
+<div id="list"></div>
+</div>
+
+<div class="card">
+<h3>📨 رسالة التسديد</h3>
+<textarea id="messageTemplate" rows="4">السلام عليكم {name}، تم استلام تسديد اشتراكك بمبلغ {amount} د.ع بنجاح. تاريخ انتهاء الاشتراك: {expiry}. شكراً لك.</textarea>
+<p class="small">تقدر تعدّل نص الرسالة، وتستخدم: {name} و {amount} و {expiry}.</p>
+</div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const KEY='tower_subscribers_v2';
+let subscribers=JSON.parse(localStorage.getItem(KEY)||'[]');
+
+function save(){localStorage.setItem(KEY,JSON.stringify(subscribers));render();}
+function toast(t){const e=document.getElementById('toast');e.textContent=t;e.style.display='block';setTimeout(()=>e.style.display='none',2200)}
+
+function addSubscriber(){
+ const name=document.getElementById('name').value.trim();
+ const phone=document.getElementById('phone').value.trim();
+ const amount=document.getElementById('amount').value.trim();
+ const expiry=document.getElementById('expiry').value;
+ if(!name||!phone){toast('اكتب اسم المشترك ورقم الهاتف');return}
+ subscribers.push({id:Date.now(),name,phone,amount,expiry,paid:false,paidAt:''});
+ document.getElementById('name').value='';
+ document.getElementById('phone').value='';
+ document.getElementById('amount').value='';
+ document.getElementById('expiry').value='';
+ save(); toast('تمت إضافة المشترك');
+}
+
+function markPaid(id){
+ const s=subscribers.find(x=>x.id===id);
+ if(!s)return;
+ s.paid=true;
+ s.paidAt=new Date().toLocaleString('ar-IQ');
+ save(); toast('تم تسجيل التسديد');
+}
+
+function messageFor(s){
+ const t=document.getElementById('messageTemplate').value;
+ return t.replaceAll('{name}',s.name).replaceAll('{amount}',s.amount||'').replaceAll('{expiry}',s.expiry||'');
+}
+
+function sendWhatsApp(id){
+ const s=subscribers.find(x=>x.id===id);
+ if(!s)return;
+ if(!s.paid){toast('سجّل التسديد أولاً');return}
+ const text=messageFor(s);
+ const digits=s.phone.replace(/[^0-9]/g,'');
+ let phone=digits;
+ if(phone.startsWith('0')) phone='964'+phone.slice(1);
+ const url='https://wa.me/'+phone+'?text='+encodeURIComponent(text);
+ window.open(url,'_blank');
+}
+
+function deleteSubscriber(id){
+ if(confirm('حذف هذا المشترك؟')){
+  subscribers=subscribers.filter(x=>x.id!==id);save();toast('تم الحذف');
+ }
+}
+
+function render(){
+ const list=document.getElementById('list');
+ if(!subscribers.length){list.innerHTML='<div class="empty">لا يوجد مشتركون بعد.</div>';return}
+ list.innerHTML=subscribers.map(s=>`
+ <div class="subscriber">
+   <b>${esc(s.name)}</b>
+   <div>📱 ${esc(s.phone)}</div>
+   <div>💰 ${esc(s.amount||'')} د.ع</div>
+   <div>📅 الانتهاء: ${esc(s.expiry||'غير محدد')}</div>
+   <div class="status">${s.paid?'✅ تم التسديد '+esc(s.paidAt):'⏳ لم يتم التسديد'}</div>
+   <div class="actions">
+    ${s.paid?'':'<button class="primary" onclick="markPaid('+s.id+')">✅ تسجيل التسديد</button>'}
+    <button class="secondary" onclick="sendWhatsApp(${s.id})">💬 إرسال رسالة واتساب</button>
+    <button class="danger" onclick="deleteSubscriber(${s.id})">🗑️ حذف</button>
+   </div>
+ </div>`).join('');
+}
+function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+render();
+</script>
+</body>
+</html>
